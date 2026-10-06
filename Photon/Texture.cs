@@ -1,14 +1,18 @@
 namespace Photon;
-
 using System;
 using OpenTK.Graphics.OpenGL4;
 using StbImageSharp;
 
 public class Texture : IDisposable
 {
+    #region - Fields & Propreties
+    
     public int Handle;
     private bool _disposedValue = false;
-
+    
+    #endregion
+    #region - Constructors
+    
     public Texture(string fileName)
     {
         Handle = GL.GenTexture();
@@ -28,14 +32,28 @@ public class Texture : IDisposable
         // Generate the mipmap
         GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
     }
-
+    
+    #endregion
+    #region - Methods
+    
+    /// <summary>
+    /// Activate the texture at the given texture unit and bind it.
+    /// </summary>
+    /// <param name="unit">The texture unit to activate.</param>
     public void Use(TextureUnit unit = TextureUnit.Texture0)
     {
         GL.ActiveTexture(unit);
         GL.BindTexture(TextureTarget.Texture2D, Handle);
     }
-    
+
+    #endregion
     #region - IDisposable Handling
+    
+    /// <summary>
+    /// The function that allows the IDisposable interface to work.
+    /// It deletes the shader program from the VRAM.
+    /// </summary>
+    /// <param name="disposing">If the object is already being disposed</param>
     protected virtual void Dispose(bool disposing) // protected function that delete the shader from VRAM to prevent leaking
     {
         if (!_disposedValue)
@@ -45,6 +63,9 @@ public class Texture : IDisposable
         }
     }
     
+    /// <summary>
+    /// At the end of the program, if the shader haven't been disposed, inform the developper.
+    /// </summary>
     ~Texture() // Destructor to prevent GPU resource leak
     {
         if (_disposedValue == false)
@@ -53,6 +74,10 @@ public class Texture : IDisposable
         }
     }
     
+    /// <summary>
+    /// The function to call to dispose of the shader
+    /// Is mandatory to call when you end the program to not have any GPU resource leak.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);

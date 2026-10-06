@@ -3,12 +3,15 @@ using OpenTK.Graphics.OpenGL4;
 
 public class Shader : IDisposable
 {
-    public int Handle; // Since shaders are GPU objects, they're represented by an integer (handle)
+    #region - Fields and Properties
+
+    private int _handle; // Since shaders are GPU objects, they're represented by an integer (handle)
     private bool _disposedValue = false;
 
-    private string MakeShaderPath(bool isFragment, string fileName)
-        => Path.Combine(AppContext.BaseDirectory, "Shaders", isFragment ? "Fragment" : "Vertex", fileName);
+    public int Handle { get => _handle; }
 
+    #endregion
+    #region - Constructor
     public Shader(string vertexPath, string fragmentPath)
     {
         // Load the shader source code
@@ -40,54 +43,69 @@ public class Shader : IDisposable
         }
         
         // link the fragment and vertex shader into a program
-        Handle = GL.CreateProgram();
+        _handle = GL.CreateProgram();
         
-        GL.AttachShader(Handle, vertexShader);
-        GL.AttachShader(Handle, fragmentShader);
+        GL.AttachShader(_handle, vertexShader);
+        GL.AttachShader(_handle, fragmentShader);
         
-        GL.LinkProgram(Handle);
+        GL.LinkProgram(_handle);
 
-        GL.GetProgram(Handle, GetProgramParameterName.LinkStatus, out success);
+        GL.GetProgram(_handle, GetProgramParameterName.LinkStatus, out success);
         if (success == 0)
         {
-            string infoLog = GL.GetProgramInfoLog(Handle);
+            string infoLog = GL.GetProgramInfoLog(_handle);
             Console.WriteLine(infoLog);
         }
         
         // Memory cleanup
-        GL.DetachShader(Handle, vertexShader);
-        GL.DetachShader(Handle, fragmentShader);
+        GL.DetachShader(_handle, vertexShader);
+        GL.DetachShader(_handle, fragmentShader);
         GL.DeleteShader(vertexShader);
         GL.DeleteShader(fragmentShader);
     }
-
+    #endregion
+    #region - Methods
+    
+    private string MakeShaderPath(bool isFragment, string fileName)
+        => Path.Combine(AppContext.BaseDirectory, "Shaders", isFragment ? "Fragment" : "Vertex", fileName);
+    
     public void Use()
     {
-        GL.UseProgram(Handle);
+        GL.UseProgram(_handle);
     }
     
     public int GetAttribLocation(string attribName)
     {
-        return GL.GetAttribLocation(Handle, attribName);
+        return GL.GetAttribLocation(_handle, attribName);
     }
     
     public void SetInt(string name, int value)
     {
-        int location = GL.GetUniformLocation(Handle, name);
+        int location = GL.GetUniformLocation(_handle, name);
         Use();
         GL.Uniform1(location, value);
     }
-
-    #region - IDisposavleHandling
+    
+    #endregion
+    #region - IDisposale Handling
+    
+    /// <summary>
+    /// The function that allows the IDisposable interface to work.
+    /// It deletes the texture from the VRAM.
+    /// </summary>
+    /// <param name="disposing">If the object is already being disposed</param>
     protected virtual void Dispose(bool disposing) // protected function that delete the shader from VRAM to prevent leaking
     {
         if (!_disposedValue)
         {
-            GL.DeleteProgram(Handle);
+            GL.DeleteTexture(_handle);
             _disposedValue = true;
         }
     }
-
+    
+    /// <summary>
+    /// At the end of the program, if the shader haven't been disposed, inform the developper.
+    /// </summary>
     ~Shader() // Destructor to prevent GPU resource leak
     {
         if (_disposedValue == false)
@@ -96,6 +114,10 @@ public class Shader : IDisposable
         }
     }
     
+    /// <summary>
+    /// The function to call to dispose of the texture
+    /// Is mandatory to call when you end the program to not have any GPU resource leak.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
