@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -99,6 +100,9 @@ namespace Photon
         {
             base.OnRenderFrame(args);
             
+            Matrix4 transform = GetTransformMatrix(new Vector3(0, 0, 0),new Vector3(1 + (float)Math.Cos(_timer.Elapsed.TotalSeconds * 2f) * 0.3f, 1, 1), (float)_timer.Elapsed.TotalSeconds * 50);
+            _shader.SetMatrix4("transfrom", transform);
+            
             // Used to clear the screen.
             GL.Clear(ClearBufferMask.ColorBufferBit);
             
@@ -153,6 +157,25 @@ namespace Photon
             GL.DeleteBuffer(_vertexBufferObject);
             GL.DeleteBuffer(_elementBufferObject);
             GL.DeleteVertexArray(_vertexArrayObject);
+        }
+
+        #endregion
+
+        #region Methods
+        
+        /// <summary>
+        /// Generate a transform matrix.
+        /// </summary>
+        /// <param name="trans">The transform vector.</param>
+        /// <param name="scale">The scale vector.</param>
+        /// <param name="rot">Currently the rot is only on the Z axis.</param>
+        /// <returns>The transform matrix.</returns>
+        private Matrix4 GetTransformMatrix(Vector3 trans, Vector3 scale, float rot)
+        {
+            Matrix4 mRot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(rot));
+            Matrix4 mScale = Matrix4.CreateScale(scale);
+            Matrix4 mTrans = Matrix4.CreateTranslation(trans);
+            return mRot * mScale * mTrans;
         }
 
         #endregion

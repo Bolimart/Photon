@@ -7,9 +7,11 @@ layout (location = 1) in vec2 aUvCoord;
 
 out vec2 uvCoord;
 
+uniform mat4 transfrom;
+
 void main()
 {
     // built-in variable for vertex shaders that represents the final position of that vertex, gl_Position is a vec4.
-    gl_Position = vec4(aPosition, 1.0);
+    gl_Position = vec4(aPosition, 1.0) * transfrom;
     uvCoord = aUvCoord;
 }

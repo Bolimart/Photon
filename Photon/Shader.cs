@@ -1,3 +1,5 @@
+using OpenTK.Mathematics;
+
 namespace Photon;
 using OpenTK.Graphics.OpenGL4;
 
@@ -84,6 +86,13 @@ public class Shader : IDisposable
         int location = GL.GetUniformLocation(_handle, name);
         Use();
         GL.Uniform1(location, value);
+    }
+
+    public void SetMatrix4(string name, Matrix4 value)
+    {
+        int location = GL.GetUniformLocation(_handle, name);
+        Use();
+        GL.UniformMatrix4(location,true, ref value);
     }
     
     #endregion
