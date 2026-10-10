@@ -84,6 +84,7 @@ public class Shader : IDisposable
     public void SetInt(string name, int value)
     {
         int location = GL.GetUniformLocation(_handle, name);
+        if (location == -1) Console.WriteLine($"Uniform '{name}' introuvable");
         Use();
         GL.Uniform1(location, value);
     }
@@ -91,6 +92,7 @@ public class Shader : IDisposable
     public void SetMatrix4(string name, Matrix4 value)
     {
         int location = GL.GetUniformLocation(_handle, name);
+        if (location == -1) Console.WriteLine($"Uniform '{name}' introuvable");
         Use();
         GL.UniformMatrix4(location,true, ref value);
     }

@@ -36,7 +36,9 @@ namespace Photon
         private Shader _shader;
         private Texture _textureCrate;
         private Texture _textureFace;
-        
+        private int _width = width;
+        private int _height = height;
+
         #endregion
         #region - Methods override
 
@@ -100,8 +102,21 @@ namespace Photon
         {
             base.OnRenderFrame(args);
             
-            Matrix4 transform = GetTransformMatrix(new Vector3(0, 0, 0),new Vector3(1 + (float)Math.Cos(_timer.Elapsed.TotalSeconds * 2f) * 0.3f, 1, 1), (float)_timer.Elapsed.TotalSeconds * 50);
-            _shader.SetMatrix4("transfrom", transform);
+            // Applying the transform to the object basically convert it to world space
+            Matrix4 world = GetTransformMatrix(new Vector3(0, 0, 0),
+                 new Vector3(1 + (float)Math.Cos(_timer.Elapsed.TotalSeconds * 2f) * 0.3f, 1, 1), 
+                 new Vector3((float)_timer.Elapsed.TotalSeconds * 500, 0, 0));
+            Console.WriteLine(world);
+            
+            // The view matrix is just translating and rotating the whole world
+            Matrix4 view = Matrix4.CreateTranslation(new Vector3(0.0f, 0.0f, -3.0f));
+
+            Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45.0f), (float)_width / _height, 0.1f, 100.0f);
+            Console.WriteLine((float)_width / _height);
+            
+            _shader.SetMatrix4("model", world);
+            _shader.SetMatrix4("view", view);
+            _shader.SetMatrix4("projection", projection);
             
             // Used to clear the screen.
             GL.Clear(ClearBufferMask.ColorBufferBit);
@@ -137,6 +152,9 @@ namespace Photon
         protected override void OnFramebufferResize(FramebufferResizeEventArgs args)
         {
             base.OnFramebufferResize(args);
+
+            _width = args.Width;
+            _height = args.Height;
             
             GL.Viewport(0, 0, args.Width, args.Height);
         }
@@ -170,9 +188,11 @@ namespace Photon
         /// <param name="scale">The scale vector.</param>
         /// <param name="rot">Currently the rot is only on the Z axis.</param>
         /// <returns>The transform matrix.</returns>
-        private Matrix4 GetTransformMatrix(Vector3 trans, Vector3 scale, float rot)
+        private Matrix4 GetTransformMatrix(Vector3 trans, Vector3 scale, Vector3 rot)
         {
-            Matrix4 mRot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(rot));
+            Matrix4 mRot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(rot.Z));
+            mRot *= Matrix4.CreateRotationX(MathHelper.DegreesToRadians(rot.X));
+            mRot *= Matrix4.CreateRotationY(MathHelper.DegreesToRadians(rot.Y));
             Matrix4 mScale = Matrix4.CreateScale(scale);
             Matrix4 mTrans = Matrix4.CreateTranslation(trans);
             return mRot * mScale * mTrans;
