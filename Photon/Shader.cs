@@ -1,7 +1,7 @@
-using OpenTK.Mathematics;
-
 namespace Photon;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
+
 
 public class Shader : IDisposable
 {
@@ -29,19 +29,21 @@ public class Shader : IDisposable
         // Compile the vertex shader
         GL.CompileShader(vertexShader);
         GL.GetShader(vertexShader, ShaderParameter.CompileStatus, out int success);
+        string infoLog = GL.GetShaderInfoLog(vertexShader);
+        Console.WriteLine(infoLog);
         if (success == 0) // If the compilation failed.
         {
-            string infoLog = GL.GetShaderInfoLog(vertexShader);
-            Console.WriteLine(infoLog);
+            throw new Exception();
         }
         
         // Compile the fragment shader
         GL.CompileShader(fragmentShader);
         GL.GetShader(fragmentShader, ShaderParameter.CompileStatus, out success);
+        infoLog = GL.GetShaderInfoLog(fragmentShader);
+        Console.WriteLine(infoLog);
         if (success == 0) // If the compilation failed.
         {
-            string infoLog = GL.GetShaderInfoLog(fragmentShader);
-            Console.WriteLine(infoLog);
+            throw new Exception();
         }
         
         // link the fragment and vertex shader into a program
@@ -55,7 +57,7 @@ public class Shader : IDisposable
         GL.GetProgram(_handle, GetProgramParameterName.LinkStatus, out success);
         if (success == 0)
         {
-            string infoLog = GL.GetProgramInfoLog(_handle);
+            infoLog = GL.GetProgramInfoLog(_handle);
             Console.WriteLine(infoLog);
         }
         
@@ -64,6 +66,13 @@ public class Shader : IDisposable
         GL.DetachShader(_handle, fragmentShader);
         GL.DeleteShader(vertexShader);
         GL.DeleteShader(fragmentShader);
+        
+        GL.GetProgram(_handle, GetProgramParameterName.ActiveUniforms, out int count);
+        for (int i = 0; i < count; i++)
+        {
+            string name = GL.GetActiveUniform(_handle, i, out int size, out ActiveUniformType type);
+            Console.WriteLine($"uniform {i}: {name} ({type})");
+        }
     }
     #endregion
     #region - Methods
@@ -95,6 +104,20 @@ public class Shader : IDisposable
         if (location == -1) Console.WriteLine($"Uniform '{name}' introuvable");
         Use();
         GL.UniformMatrix4(location,true, ref value);
+    }
+    
+    public void SetFloat(string name, float value)
+    {
+        int location = GL.GetUniformLocation(_handle, name);
+        Use();
+        GL.Uniform1(location, value);
+    }
+
+    public void SetVector3(string name, Vector3 value)
+    {
+        int location = GL.GetUniformLocation(_handle, name);
+        Use();
+        GL.Uniform3(location, value);
     }
     
     #endregion

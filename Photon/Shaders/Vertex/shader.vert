@@ -6,6 +6,7 @@ layout (location = 0) in vec3 aPosition;
 layout (location = 1) in vec2 aUvCoord;
 
 out vec2 uvCoord;
+out float viewDist;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -15,5 +16,7 @@ void main()
 {
     // built-in variable for vertex shaders that represents the final position of that vertex, gl_Position is a vec4.
     gl_Position = vec4(aPosition, 1.0) * model * view * projection;
+    vec4 viewPos = vec4(aPosition, 1.0) * model * view;
+    viewDist = length(viewPos.xyz); // true distance from the camera
     uvCoord = aUvCoord;
 }

@@ -2,6 +2,7 @@
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Common.Input;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
@@ -12,26 +13,66 @@ namespace Photon
     {
         #region - Fields & Propreties
         
+        private CubeData[] _cubes;
+        
         float[] _vertices = {
-            //Position          Texture coordinates
-             0.5f,  0.5f, 0.0f, 1.0f, 1.0f, // top right
-             0.5f, -0.5f, 0.0f, 1.0f, 0.0f, // bottom right
-            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, // bottom left
-            -0.5f,  0.5f, 0.0f, 0.0f, 1.0f, // top left
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+            0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+            0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
         };
 
         // Why is vertices an array of float and not an array of coordinates ?
         // Because the GPU is designed for reading long string of simple data
         
-        private uint[] _indices = {
-            0, 1, 3,
-            1, 2, 3
-        };
-        
         private int _vertexBufferObject; // Store the data (pos) of the vertices
         private int _vertexArrayObject; // Store the configuration of the Vertex Format
         private int _elementBufferObject; // Strore the indexes of each vertex of each triangle
         private Stopwatch _timer = new Stopwatch();
+        
+        // Camera
+        private Camera _camera = new Camera(new Vector3(0.0f, 0.0f,  10.0f));
+        private float _speed = 15f;
+        private float _fov = 45f;
+        // Mouse
+        private float _sensibility = 0.3f;
         
         private Shader _shader;
         private Texture _textureCrate;
@@ -49,9 +90,14 @@ namespace Photon
         {
             Console.WriteLine(GL.GetString(StringName.Version));
             base.OnLoad();
+            Console.WriteLine($"Context: {Context != null}, current: {Context?.IsCurrent}");
+            Console.WriteLine($"GL error: {GL.GetError()}");
+            Console.WriteLine($"Version: [{GL.GetString(StringName.Version)}]");
             
             // The color used by the Color buffer when the window is cleared
-            GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            // Enable Z-Testing
+            GL.Enable(EnableCap.DepthTest);
             
             _timer.Start();
             
@@ -66,6 +112,9 @@ namespace Photon
             
             // Load the shader
             _shader = new Shader("shader.vert", "shader.frag");
+            _shader.SetVector3("fogColor", new Vector3(0.0f, 0.0f, 0.0f)); // même valeur que GL.ClearColor
+            _shader.SetFloat("fogStart", 5f);
+            _shader.SetFloat("fogEnd", 120f);
             
             // Load the texture and modify settings
             _textureCrate = new Texture("container.jpg");
@@ -86,11 +135,36 @@ namespace Photon
             // Create the EBO
             _elementBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufferObject);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, _indices.Length * sizeof(uint), _indices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
             
             // Set the uniforms:
             _shader.SetInt("texture0", 0);
             _shader.SetInt("texture1", 1);
+            
+            // Load the scene:
+            var rng = new Random(42); // fixed seed
+            _cubes = new CubeData[4800];
+
+            for (int i = 0; i < _cubes.Length; i++)
+            {
+                Vector3 axis = new Vector3(
+                    (float)rng.NextDouble() * 2 - 1,
+                    (float)rng.NextDouble() * 2 - 1,
+                    (float)rng.NextDouble() * 2 - 1);
+                if (axis.LengthSquared < 0.01f) axis = Vector3.UnitY; // évite un axe nul
+
+                _cubes[i] = new CubeData
+                {
+                    Position = new Vector3(
+                        (float)rng.NextDouble() * 240 - 120,
+                        (float)rng.NextDouble() * 240 - 120,
+                        (float)rng.NextDouble() * 240 - 120),
+                    Axis  = Vector3.Normalize(axis),
+                    Speed = 0.3f + (float)rng.NextDouble() * 2.2f,
+                    Phase = (float)rng.NextDouble() * MathHelper.TwoPi,
+                    Scale = 0.5f + (float)rng.NextDouble() * 1.8f
+                };
+            }
         }
         
         /// <summary>
@@ -102,32 +176,36 @@ namespace Photon
         {
             base.OnRenderFrame(args);
             
-            // Applying the transform to the object basically convert it to world space
-            Matrix4 world = GetTransformMatrix(new Vector3(0, 0, 0),
-                 new Vector3(1 + (float)Math.Cos(_timer.Elapsed.TotalSeconds * 2f) * 0.3f, 1, 1), 
-                 new Vector3((float)_timer.Elapsed.TotalSeconds * 500, 0, 0));
-            Console.WriteLine(world);
-            
-            // The view matrix is just translating and rotating the whole world
-            Matrix4 view = Matrix4.CreateTranslation(new Vector3(0.0f, 0.0f, -3.0f));
-
-            Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(45.0f), (float)_width / _height, 0.1f, 100.0f);
-            Console.WriteLine((float)_width / _height);
-            
-            _shader.SetMatrix4("model", world);
-            _shader.SetMatrix4("view", view);
-            _shader.SetMatrix4("projection", projection);
-            
             // Used to clear the screen.
             GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             
-            // The render code
+            // Load Ressources
             _shader.Use();
             _textureCrate.Use(TextureUnit.Texture0);
             _textureFace.Use(TextureUnit.Texture1);
+            GL.BindVertexArray(_vertexArrayObject);
             
-            // Create the uniforms:
-            GL.DrawElements(PrimitiveType.Triangles, _indices.Length, DrawElementsType.UnsignedInt, 0);
+            // The view matrix is just translating and rotating the whole world
+            Matrix4 view = _camera.GetView();
+            Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_fov), (float)_width / _height, 0.1f, 120.0f);
+            _shader.SetMatrix4("view", view);
+            _shader.SetMatrix4("projection", projection);
+            
+            float t = (float)_timer.Elapsed.TotalSeconds;
+            
+            foreach (var cube in _cubes)
+            {
+                float angle = cube.Phase + cube.Speed * t;
+                
+                // Convention ligne : échelle -> rotation -> translation
+                Matrix4 model = Matrix4.CreateScale(cube.Scale)
+                                * Matrix4.CreateFromAxisAngle(cube.Axis, angle)
+                                * Matrix4.CreateTranslation(cube.Position);
+                
+                _shader.SetMatrix4("model", model);
+                GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
+            }
             
             // Swap the old frame with the newly rendered frame.
             SwapBuffers();
@@ -142,6 +220,55 @@ namespace Photon
         {
             base.OnUpdateFrame(args);
             
+            if (!IsFocused) // check to see if the window is focused
+            {
+                return;
+            }
+            if (CursorState != CursorState.Grabbed) CursorState = CursorState.Grabbed;
+            
+            KeyboardState input = KeyboardState;
+
+            #region - Displacement Input
+
+            if (input.IsKeyDown(Keys.W))
+            {
+                _camera.Position += _camera.Front * _speed * (float)args.Time; //Forward 
+            }
+
+            if (input.IsKeyDown(Keys.S))
+            {
+                _camera.Position -= _camera.Front * _speed * (float)args.Time; //Backwards
+            }
+
+            if (input.IsKeyDown(Keys.A))
+            {
+                _camera.Position -= _camera.Right * _speed * (float)args.Time; //Left
+            }
+
+            if (input.IsKeyDown(Keys.D))
+            {
+                _camera.Position += _camera.Right * _speed * (float)args.Time; //Right
+            }
+
+            if (input.IsKeyDown(Keys.E))
+            {
+                _camera.Position += _camera.Up * _speed * (float)args.Time; //Up 
+            }
+
+            if (input.IsKeyDown(Keys.Q))
+            {
+                _camera.Position -= _camera.Up * _speed * (float)args.Time; //Down
+            }
+
+            #endregion
+            #region - Rotation Input
+
+            const float sensitivity = 0.1f;
+            var mouse = MouseState;
+            _camera.Yaw   += mouse.Delta.X * sensitivity;
+            _camera.Pitch -= mouse.Delta.Y * sensitivity; // screen Y goes down
+
+            #endregion
             if (KeyboardState.IsKeyDown(Keys.Escape)) Close();
         }
         
@@ -176,7 +303,28 @@ namespace Photon
             GL.DeleteBuffer(_elementBufferObject);
             GL.DeleteVertexArray(_vertexArrayObject);
         }
+        
+        
+        protected override void OnMouseWheel(MouseWheelEventArgs e)
+        {
+            base.OnMouseWheel(e);
 
+            var value = _fov - e.OffsetY;
+            
+            if (value >= 45.0f)
+            {
+                _fov = 45.0f;
+            }
+            else if (value <= 1.0f)
+            {
+                _fov = 1.0f;
+            }
+            else
+            {
+                _fov -= e.OffsetY;
+            }
+        }
+        
         #endregion
 
         #region Methods
